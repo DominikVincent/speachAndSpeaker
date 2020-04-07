@@ -1,5 +1,7 @@
 import numpy as np
-from tools2 import *
+from lab2_tools import *
+
+
 
 def concatTwoHMMs(hmm1, hmm2):
     """ Concatenates 2 HMM models
@@ -29,6 +31,47 @@ def concatTwoHMMs(hmm1, hmm2):
 
     See also: the concatenating_hmms.pdf document in the lab package
     """
+    pi = np.zeros(hmm1['startprob'].shape[0] + hmm2['startprob'].shape[0] -1)
+    pi[0:hmm1['startprob'].shape[0]] = hmm1['startprob']
+    tmp = np.multiply(hmm2['startprob'], hmm1['startprob'][-1])
+    pi[hmm1['startprob'].shape[0]-1:] = tmp
+
+    h1len = hmm1['startprob'].shape[0]
+    h2len = hmm2['startprob'].shape[0]
+    
+
+    dim = h1len+h2len-1
+    trans = np.zeros((dim, dim))
+    #first transmat
+    trans[:h1len-1, : h1len-1] = hmm1['transmat'][:-1, :-1]
+
+    #transition to second mat
+    #print( hmm1['transmat'])
+    column = np.matrix(hmm1['transmat'][:-1,-1]).T
+    #print(column)
+    tile = np.tile(column, (1, h2len) )
+    #print(tile)
+    secondPart = np.multiply(tile, np.matrix(hmm2['startprob'][:]) )
+    #print(secondPart)
+    secondPart = secondPart
+    trans[:h1len-1, h1len-1:]  = secondPart 
+
+    #second matrix
+    trans[h1len-1:, h1len-1:] = hmm2['transmat']
+
+    #means
+    means  = np.vstack((hmm1['means'], hmm2['means']))
+
+    #covars
+    covars = np.vstack((hmm1['covars'], hmm2['covars']))
+    
+    hmm3 = {}
+    hmm3['startprob'] = pi
+    hmm3['transmat']  = trans
+    hmm3['means']     = means
+    hmm3['covars']    = covars
+    return hmm3
+
 
 # this is already implemented, but based on concat2HMMs() above
 def concatHMMs(hmmmodels, namelist):
