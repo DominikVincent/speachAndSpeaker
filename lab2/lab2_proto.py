@@ -61,7 +61,6 @@ def concatTwoHMMs(hmm1, hmm2):
 
     #means
     means  = np.vstack((hmm1['means'], hmm2['means']))
-
     #covars
     covars = np.vstack((hmm1['covars'], hmm2['covars']))
     
@@ -134,7 +133,16 @@ def forward(log_emlik, log_startprob, log_transmat):
     Output:
         forward_prob: NxM array of forward log probabilities for each of the M states in the model
     """
+    alpha = np.zeros_like(log_emlik)
+   
+    alpha[0] = log_startprob[:-1] + log_emlik[0]
+    print(alpha[0])
 
+    for i in range(1, log_emlik.shape[0]):
+        for j in range(log_emlik.shape[1]):
+            arr = alpha[i-1] + log_transmat[:-1,j]
+            alpha[i,j] = logsumexp(arr) + log_emlik[i,j]
+    return alpha
 def backward(log_emlik, log_startprob, log_transmat):
     """Backward (beta) probabilities in log domain.
 
@@ -146,6 +154,14 @@ def backward(log_emlik, log_startprob, log_transmat):
     Output:
         backward_prob: NxM array of backward log probabilities for each of the M states in the model
     """
+    beta = np.zeros_like(log_emlik)
+
+    for i in range (log_emlik.shape[0]-2, -1,-1):
+        for j in range(log_emlik.shape[1]):
+            arr = log_transmat[j,:-1] + beta[i+1] + log_emlik[i+1,j]
+            #print(arr)
+            beta[i,j] = logsumexp(arr)
+    return beta
 
 def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
     """Viterbi path.
@@ -161,6 +177,30 @@ def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
         viterbi_loglik: log likelihood of the best path
         viterbi_path: best path
     """
+    probState = np.zeros_like(log_emlik)
+    prevMax = np.zeros_like(log_emlik, dtype = np.int8)
+
+    probState[0] = log_startprob[:-1] + log_emlik[0]
+
+    for i in range(1, log_emlik.shape[0]):
+        for j in range(log_emlik.shape[1]):
+            arr = probState[i-1] + log_transmat[:-1,j]
+            probState[i,j] = np.max(arr) + log_emlik[i,j]
+            prevMax[i,j] = np.argmax(arr)
+
+    path = []
+    probPath = np.max(probState[-1,:])
+    currentInd = np.argmax(probState[-1,:])
+    for i in range(log_emlik.shape[0]-1, -1,-1):
+        path.insert(0, currentInd)
+        currentInd = prevMax[i,currentInd]
+    #print(prevMax)
+    #print(probState[-1])
+    return probPath, path
+
+
+
+
 
 def statePosteriors(log_alpha, log_beta):
     """State posterior (gamma) probabilities in log domain.
