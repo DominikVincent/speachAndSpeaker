@@ -136,7 +136,7 @@ def forward(log_emlik, log_startprob, log_transmat):
     alpha = np.zeros_like(log_emlik)
    
     alpha[0] = log_startprob[:-1] + log_emlik[0]
-    print(alpha[0])
+    #print(alpha[0])
 
     for i in range(1, log_emlik.shape[0]):
         for j in range(log_emlik.shape[1]):
@@ -158,7 +158,7 @@ def backward(log_emlik, log_startprob, log_transmat):
 
     for i in range (log_emlik.shape[0]-2, -1,-1):
         for j in range(log_emlik.shape[1]):
-            arr = log_transmat[j,:-1] + beta[i+1] + log_emlik[i+1,j]
+            arr = log_transmat[j,:-1] + beta[i+1] + log_emlik[i+1]
             #print(arr)
             beta[i,j] = logsumexp(arr)
     return beta
@@ -213,6 +213,14 @@ def statePosteriors(log_alpha, log_beta):
     Output:
         log_gamma: NxM array of gamma probabilities for each of the M states in the model
     """
+    
+
+    log_gamma = log_alpha + log_beta
+    
+    logExpSum = logsumexp(log_alpha[-1])
+    log_gamma = log_gamma - logExpSum
+    return log_gamma
+    
 
 def updateMeanAndVar(X, log_gamma, varianceFloor=5.0):
     """ Update Gaussian parameters with diagonal covariance
@@ -229,3 +237,31 @@ def updateMeanAndVar(X, log_gamma, varianceFloor=5.0):
          means: MxD mean vectors for each state
          covars: MxD covariance (variance) vectors for each state
     """
+    #means = np.zeros((log_gamma.shape[1], 1))
+    gamma = np.exp(log_gamma)
+    means = gamma[0][np.newaxis].T * X[0]
+    for i in range(1, X.shape[0]):
+        tmp = gamma[i][np.newaxis].T * X[i]
+        #print("gamma: ", gamma[i])
+        #print(tmp)
+        #print("\n")
+        means += tmp
+        
+
+    sumGamma = np.sum(gamma, axis = 0)
+
+    
+    means = means/sumGamma[np.newaxis].T
+    #print(means.shape)
+
+    #covars
+    covars = np.zeros_like(means)
+    for i in range(log_gamma.shape[1]):
+        numerator = np.sum(gamma[:,i][np.newaxis].T * np.square( X - means[i]) , axis = 0 )
+        denominator = np.sum(gamma[:, i])
+        #print("num", numerator)
+        #print("den", denominator)
+        covars[i] = numerator/denominator
+    
+    covars[covars < varianceFloor] = varianceFloor
+    return means, covars
