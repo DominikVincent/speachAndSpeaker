@@ -189,8 +189,9 @@ def viterbi(log_emlik, log_startprob, log_transmat, forceFinalState=True):
             prevMax[i,j] = np.argmax(arr)
 
     path = []
-    probPath = np.max(probState[-1,:])
-    currentInd = np.argmax(probState[-1,:])
+    probPath =  probState[-1,-1]#np.max(probState[-1,:])
+    currentInd = probState.shape[1] -1#np.argmax(probState[-1,:])
+    print(currentInd)
     for i in range(log_emlik.shape[0]-1, -1,-1):
         path.insert(0, currentInd)
         currentInd = prevMax[i,currentInd]
