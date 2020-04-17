@@ -122,3 +122,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+lab3/tidigits/
+
+lab3/äasmachfertig.zip
+
+*.npz
